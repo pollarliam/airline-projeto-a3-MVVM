@@ -1,5 +1,5 @@
 import Foundation
-import Observation
+import Combine
 
 @MainActor
 final class FlightsViewModel: ObservableObject {

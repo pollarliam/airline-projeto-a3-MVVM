@@ -1,11 +1,38 @@
 import Foundation
 
+struct FlightsResponse: Codable {
+    let total: Int?
+    let data: [Flight]
+    let sortDuration: Double?
+    let algorithm: String?
+}
+
 final class FlightsService {
-    private let baseURL = URL(string: "http://localhost:4000")!
+    private let baseURL = URL(string: "http://127.0.0.1:4000")!
 
     private var decoder: JSONDecoder {
         let d = JSONDecoder()
-        d.dateDecodingStrategy = .iso8601
+        // Prefer ISO8601 with fractional seconds, fall back to standard ISO8601
+        let iso8601WithFractional = ISO8601DateFormatter()
+        iso8601WithFractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let iso8601 = ISO8601DateFormatter()
+
+        d.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            let string = try container.decode(String.self)
+            if let date = iso8601WithFractional.date(from: string) {
+                return date
+            }
+            if let date = iso8601.date(from: string) {
+                return date
+            }
+            throw DecodingError.dataCorrupted(
+                .init(codingPath: decoder.codingPath,
+                      debugDescription: "Invalid ISO8601 date: \(string)")
+            )
+        }
+        // Keep keys as-is; if backend uses camelCase and you switch Swift to camelCase, consider .convertFromSnakeCase
+        d.keyDecodingStrategy = .useDefaultKeys
         return d
     }
 
@@ -30,6 +57,21 @@ final class FlightsService {
 
         let url = components.url!
         let (data, _) = try await URLSession.shared.data(from: url)
-        return try decoder.decode([Flight].self, from: data)
+        do {
+            let wrapper = try decoder.decode(FlightsResponse.self, from: data)
+            return wrapper.data
+        } catch {
+            #if DEBUG
+            if let raw = String(data: data, encoding: .utf8) {
+                print("[FlightsService] Decode failed. Raw response:\n\(raw)")
+            }
+            if let decodingError = error as? DecodingError {
+                print("[FlightsService] DecodingError: \(decodingError)")
+            } else {
+                print("[FlightsService] Error: \(error.localizedDescription)")
+            }
+            #endif
+            throw error
+        }
     }
 }

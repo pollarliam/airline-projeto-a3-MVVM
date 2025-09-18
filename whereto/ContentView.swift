@@ -6,48 +6,91 @@
 //
 
 import SwiftUI
-import SwiftData
 
 struct ContentView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
+    @StateObject private var vm = FlightsViewModel()
 
     var body: some View {
-        NavigationSplitView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-                    } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
-                    }
-                }
-                .onDelete(perform: deleteItems)
+        NavigationStack {
+            VStack(spacing: 12) {
+                queryControls
+                content
             }
-            .navigationSplitViewColumnWidth(min: 180, ideal: 200)
+            .padding()
+            .navigationTitle("Flights")
             .toolbar {
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
-                    }
+                Button {
+                    Task { await vm.load() }
+                } label: {
+                    Label("Refresh", systemImage: "arrow.clockwise")
                 }
             }
-        } detail: {
-            Text("Select an item")
+            .task { await vm.load() }
         }
     }
 
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
+    private var queryControls: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                TextField("Origem", text: $vm.origem)
+                    .textFieldStyle(.roundedBorder)
+                TextField("Destino", text: $vm.destino)
+                    .textFieldStyle(.roundedBorder)
+            }
+            HStack {
+                Picker("Sort", selection: $vm.sortBy) {
+                    Text("Preço").tag("preco")
+                    Text("Partida").tag("partida")
+                    Text("Duração").tag("duracao")
+                }
+                .pickerStyle(.menu)
+                Picker("Order", selection: $vm.order) {
+                    Text("Asc").tag("asc")
+                    Text("Desc").tag("desc")
+                }
+                .pickerStyle(.segmented)
+                Picker("Alg", selection: $vm.algorithm) {
+                    Text("QuickSort").tag("quicksort")
+                    Text("BubbleSort").tag("bubblesort")
+                }
+                .pickerStyle(.menu)
+                Button("Buscar") {
+                    Task { await vm.load() }
+                }
+                .buttonStyle(.borderedProminent)
+            }
         }
     }
 
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            for index in offsets {
-                modelContext.delete(items[index])
+    private var content: some View {
+        Group {
+            if vm.isLoading {
+                ProgressView("Carregando...")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if let msg = vm.errorMessage {
+                VStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle")
+                    Text(msg).foregroundStyle(.red)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if vm.flights.isEmpty {
+                ContentUnavailableView("Sem resultados", systemImage: "airplane", description: Text("Ajuste os filtros e tente novamente."))
+            } else {
+                List(vm.flights, id: \.self) { flight in
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("\(flight.origem) → \(flight.destino)")
+                            .font(.headline)
+                        // preco is a String in backend; format safely
+                        if let price = Double(flight.preco) {
+                            Text("Preço: \(price, format: .number.precision(.fractionLength(2)))")
+                        } else {
+                            Text("Preço: \(flight.preco)")
+                        }
+                        Text("Partida: \(flight.data_ida.formatted())")
+                        Text("Duração: \(flight.duracao_min) min")
+                        Text("Companhia: \(flight.companhia)")
+                    }
+                }
             }
         }
     }
@@ -55,5 +98,4 @@ struct ContentView: View {
 
 #Preview {
     ContentView()
-        .modelContainer(for: Item.self, inMemory: true)
 }

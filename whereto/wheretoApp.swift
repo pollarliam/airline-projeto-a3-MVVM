@@ -7,9 +7,13 @@
 
 import SwiftUI
 import SwiftData
+import AppKit
 
 @main
 struct wheretoApp: App {
+    @State private var isShowingHealthAlert: Bool = false
+    @State private var healthMessage: String = ""
+
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Item.self,
@@ -26,7 +30,29 @@ struct wheretoApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .alert("Backend Health", isPresented: $isShowingHealthAlert) {
+                    Button("OK", role: .cancel) { }
+                } message: {
+                    Text(healthMessage)
+                }
         }
         .modelContainer(sharedModelContainer)
+        .commands {
+            CommandMenu("Debug") {
+                Button("Check Backend Health") {
+                    Task { @MainActor in
+                        let service = FlightsService()
+                        do {
+                            let result = try await service.health()
+                            healthMessage = result.description
+                        } catch {
+                            healthMessage = error.localizedDescription
+                        }
+                        isShowingHealthAlert = true
+                    }
+                }
+                .keyboardShortcut("h", modifiers: [.command, .shift])
+            }
+        }
     }
 }
