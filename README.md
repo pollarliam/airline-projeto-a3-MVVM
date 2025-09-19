@@ -1,85 +1,41 @@
-# Projeto A3 - Sistema de Busca e Comparação de Passagens Aéreas
+# Fork: Interface em SwiftUI 
 
-Este projeto consiste na construção de um sistema de backend para simular a busca e comparação de passagens aéreas. Ele atende aos requisitos da UC "Estruturas de Dados e Análise de Algoritmos", com foco na implementação e análise de diferentes algoritmos de busca e ordenação em memória.
+Este fork existe para construir a interface do projeto original usando **SwiftUI**, consumindo a API HTTP já existente.
 
-### Requisitos Atendidos
 
-* **Implementação de Algoritmos:** O projeto utiliza algoritmos de ordenação (`Quicksort` e `Bubble Sort`) e de busca (`Busca Linear` e `Busca Binária`) em memória para manipular os dados de voos.
-* **Mensuração de Desempenho:** Mecanismos de tempo de execução foram implementados para comparar o desempenho dos diferentes algoritmos.
-* **Estruturas de Dados:** Os dados do banco de dados são carregados em memória para otimizar o tempo de execução e o uso de recursos computacionais.
-* **Modularização:** O código é organizado em módulos (rotas, controladores e utilidades) para garantir a abstração e a organização.
-* **Funcionalidades:** O sistema permite a pesquisa de voos por critérios como origem, destino, data e valor, além de possibilitar a ordenação dos resultados por preço, horário ou duração da viagem.
+## Capturas de tela
+![Screenshot 1](docs/screen1.png)
 
-### Tecnologias Utilizadas
 
-* **Node.js**
-* **Express.js** (Framework de backend)
-* **PostgreSQL** (Banco de dados)
-* **Git** e **GitHub** (Controle de versão)
+## Visão Técnica 
+- **SwiftUI** para compor telas, estados e navegação.
+- **MVVM** para separar responsabilidades: `Model` (dados), `ViewModel` (lógica/estado), `View` (apresentação).
+- **Camada de Rede** (HTTP) desacoplada via node que expõe métodos assíncronos.
+- **Data Flow** reativo: o `ViewModel` publica estado; as `Views` reagem automaticamente.
 
-### Configuração e Execução
+## Como o MVVM funciona aqui
+- **Model:** estruturas que representam voos, filtros, paginação e respostas da API.
+- **ViewModel:** orquestra chamadas HTTP, aplica filtros/ordenação, faz parsing e expõe propriedades publicadas (`@Published`) ou `@StateObject`/`@ObservedObject` para a View.
+- **View (SwiftUI):** lê o estado do ViewModel e renderiza listas, detalhes e feedback de carregamento/erro.
 
-Para rodar o projeto localmente, siga os seguintes passos:
+## Fluxo de Dados: HTTP → MVVM → UI
+1. **Requisição:** o ViewModel chama o `FlightService` (ou cliente HTTP) com parâmetros (origem, destino, ordenação, paginação, etc.).
+2. **Transporte:** o serviço monta a URL/endpoint, executa a requisição e recebe JSON.
+3. **Parsing:** o serviço decodifica JSON em `Model` (via `Codable`).
+4. **Estado:** o ViewModel atualiza propriedades publicadas.
+5. **Renderização:** as Views reagem às mudanças e atualizam a UI (listas, indicadores, mensagens).
+6. **Ações do Usuário:** interação na View (buscar, ordenar, paginar) chama métodos do ViewModel, reiniciando o ciclo.
 
-1.  **Clone o repositório:**
-    ```bash
-    git clone
-    cd [nome-do-repositorio]
-    ```
+## Considerações de Arquitetura
+- **Isolamento de Camadas:** View não conhece HTTP; ViewModel não conhece detalhes de UI.
+- **Testabilidade:** lógica de ordenação/busca e parsing podem ser testados no ViewModel/Serviço.
+- **Erros e Loading:** padronizados via estado do ViewModel para feedback na UI.
+- **Extensibilidade:** novos filtros/algoritmos entram no ViewModel/Serviço sem alterar Views.
 
-2.  **Instale as dependências:**
-    ```bash
-    npm install
-    ```
 
-3.  **Configuração do Banco de Dados:**
-    * Crie um banco de dados PostgreSQL na sua máquina local.
-    * Crie um arquivo `.env` na raiz do projeto (nunca suba este arquivo para o GitHub) com as seguintes informações:
-        ```env
-        DB_USER=seu_usuario_db
-        DB_PASSWORD=sua_senha_db
-        DB_HOST=localhost
-        DB_PORT=5432
-        DB_NAME=nome_do_seu_banco
-        PORT=4000
-        ```
-    * Importe o arquivo `.sql` da estrutura e dados das tabelas de voos para o seu banco.
-
-4.  **Inicie a API:**
-    ```bash
-    npm start
-    ```
-    A API será iniciada em `http://localhost:4000`.
-
-### Rotas da API
-
-| Rota | Descrição |
-| :--- | :--- |
-| **`GET /health`** | Verifica o status da API e a conexão com o banco de dados. Retorna a quantidade de registros na tabela de voos. |
-| **`GET /flights`** | Lista voos com filtros, ordenação e paginação. |
-| **`GET /flights/search`** | Realiza busca por um voo específico usando diferentes algoritmos e mede o tempo de execução. |
-| **`GET /flights/stats/all`** | Retorna estatísticas como preço e duração média, mínimo e máximo, com base nos filtros aplicados. |
-
-#### Exemplo de Uso das Rotas:
-
-**Listar voos:**
-`http://localhost:4000/flights?origem=GRU&destino=JFK&sortBy=preco&order=desc&page=1&pageSize=20&algorithm=quicksort`
-
-**Buscar um voo:**
-`http://localhost:4000/flights/search?key=preco&value=200.27&algorithm=binary`
-
-### Próximas Etapas
-
-O próximo passo do projeto é a implementação da **interface de usuário (GUI)**, que deve ser feita usando alguma tecnologia de GUI web, mobile ou desktop.
-
----
-
-### Autores
-
-* Saulo Guedes da Cruz
-* Solano Guedes da Cruz
-* Ramael dos Santos Cerqueira
-* Erik Ryú Guimarães Lima
-* Renato Costa Laranjeira
-* Vinicius Ribeiro Santos
-* Eduardo Dourado Marotta
+## Instruções para rodar o app
+- **Requisitos:** Xcode 26, Node.js, PostgreSQL 17
+- **Backend:** Use npm install no diretório da backend para instalar dependências. Crie uma database com o PSQL. Use o pg-restore para importar o banco de dados provisório no PSQL. Use o exemplo dotenv para preencher um dotfile env — tenha certeza de que os conteúdos de dotenv se alinhem com o seu banco de dados PSQL. Caso não veja o arquivo dotenv pressione: (⌘ + Shift + .) Use npm run para iniciar o servidor, vá para <ipEscolhido>:<portaEscolhida>/health para checar os status do servidor e banco de dados.
+- **Backend (Servidor):** Se preferir podes rodar os servidores npm e PSQL em um servidor dedicado, para fazer isso apenas siga as instruções anteriores em seu servidor, vale lembrar que o endereço IP referente à backend na MVVM vai ser o IP local de seu servidor em vez de localhost
+- **MVVM:** mantenha a API do projeto original acessível em sua rede; configure a URL da API no app dependendo do endereço que você escolheu. (O projeto está configurado para receber um endereço IPV6, não é proíbido usar localhost mas talvez não vai funcionar) — Existem structs com dados para popular a interface caso queira prototipar sem usar a backend.
+- **Execução:** selecione um simulador e rode (⌘R) O target do app é macOS, não rode um simulador iOS.
