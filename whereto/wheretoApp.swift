@@ -29,13 +29,14 @@ struct wheretoApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            MainView()
                 .alert("Backend Health", isPresented: $isShowingHealthAlert) {
                     Button("OK", role: .cancel) { }
                 } message: {
                     Text(healthMessage)
                 }
         }
+        .windowStyle(.hiddenTitleBar)
         .modelContainer(sharedModelContainer)
         .commands {
             CommandMenu("Debug") {
